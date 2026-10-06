@@ -1292,39 +1292,47 @@ input.required-incomplete {
 
 .prep-chat-msg.assistant {
   align-self: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 19px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
   background: #f8fafc;
   color: #0f172a;
   border: 1.5px solid #e2e8f0;
-  padding: 14px 18px;
+  padding: 20px 24px;
   border-radius: 14px 14px 14px 2px;
 }
 
 .prep-chat-msg.assistant h2 {
-  font-size: 15px;
-  margin: 12px 0 6px 0;
+  font-size: 26px;
+  margin: 28px 0 14px;
   color: #0f172a;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
 .prep-chat-msg.assistant h3 {
-  font-size: 13.5px;
-  margin: 12px 0 5px 0;
+  font-size: 22px;
+  margin: 28px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #cbd5e1;
   color: #0f172a;
   font-weight: 750;
   letter-spacing: -0.01em;
 }
 
 .prep-chat-msg.assistant h4 {
-  font-size: 12.5px;
-  margin: 10px 0 4px 0;
+  font-size: 20px;
+  margin: 20px 0 10px;
   color: #1e293b;
   font-weight: 700;
 }
 
 .prep-chat-msg.assistant p {
-  margin: 0 0 8px 0;
-  line-height: 1.55;
+  margin: 0 0 12px;
+  line-height: 1.6;
   color: #1e293b;
 }
 
@@ -1344,13 +1352,13 @@ input.required-incomplete {
 
 .prep-chat-msg.assistant ul,
 .prep-chat-msg.assistant ol {
-  margin: 6px 0 10px 20px;
+  margin: 12px 0 18px 24px;
   padding: 0;
 }
 
 .prep-chat-msg.assistant li {
-  margin-bottom: 5px;
-  line-height: 1.5;
+  margin-bottom: 10px;
+  line-height: 1.6;
   color: #1e293b;
 }
 

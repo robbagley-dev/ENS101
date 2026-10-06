@@ -794,6 +794,7 @@ Provide key coaching points and advice the mentor can share with the student:
 Goal: Provide the Career Mentor with an executive assessment synthesis of the student's Career Explorer results to prepare for their 1-on-1 coaching session.
 Base analysis ONLY on the uploaded or provided assessment data. If information is missing, say: 'That information was not visible in the uploaded report.'
 Use the headings 'Executive Summary' and 'Career & Major Recommendations'. Provide the summary first, then 3 career exploration options with aligned Ensign programs and evidence from the supplied assessment.
+Format those two main headings with Markdown ##. Under Executive Summary, use separate Markdown ### headings for Personality Profile (HEXACO), Workplace Preferences, Core Values, and Interests & Holland Code. Keep each assessment's bullets beneath its heading, with blank lines between sections. Put Aligned Occupations and Probing Questions for the Mentor under their own ### headings. Never use assessment section headings as list items.
 Required topics for the mentor:
 1. Personality Profile (HEXACO): Summarize scores using the mandatory Emotional Sensitivity label with 2-3 coaching takeaways for the mentor.
 2. Workplace Preferences: Highlight top organizational preferences and how the mentor can help the student evaluate work environments.
