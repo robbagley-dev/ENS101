@@ -191,6 +191,7 @@ function renderStudentSwitcher() {
 
 async function loadAppointmentById(appId) {
   readinessLookupVersion++;
+  resetPrepChat();
   clearVmockReadiness();
   if (!appId) {
     resetAppointmentLocal();
@@ -298,6 +299,9 @@ function persistState() {
 }
 
 async function fetchCareerGuidance() {
+  const lookupVersion = readinessLookupVersion;
+  const chatVersion = prepChatVersion;
+  const assessment = state.assessmentData;
   try {
     const res = await fetch('/api/career-explorer/guidance', {
       method: 'POST',
@@ -310,7 +314,8 @@ async function fetchCareerGuidance() {
       })
     });
     const data = await res.json();
-    if (data.status === 'ok') {
+    if (lookupVersion !== readinessLookupVersion || chatVersion !== prepChatVersion || assessment !== state.assessmentData) return;
+    if (res.ok && data.status === 'ok') {
       state.guidance = data;
       renderGuidanceDisplay(data);
     }
@@ -1119,6 +1124,7 @@ function setLookupBadgesChecking() {
 }
 
 async function applyReadinessProjection(projection) {
+  resetPrepChat();
   state.assessmentData = assessmentDataFromReadiness(projection.data?.career_explorer);
   state.connectStatus = connectStatusFromReadiness(projection);
   state.guidance = null;
@@ -1143,17 +1149,20 @@ async function applyReadinessProjection(projection) {
     showLookupFeedback('warning', gaps.length ? `Incomplete: ${gaps.join('; ')}.` : 'Student Readiness record is incomplete.');
   }
 
-  if (projection.data?.career_explorer) {
-    await fetchCareerGuidance();
-    if (ceStatus === 'complete' && prepChatHistory.length === 0) {
-      sendPrepChatMessage("Synthesize this student's assessment report into an executive briefing for my coaching session.");
-    }
+  if (projection.data?.career_explorer && state.assessmentData.completed_count > 0) {
+    // Each lookup owns its feedback. Synthesis starts without waiting for recommendations.
+    await Promise.all([
+      fetchCareerGuidance(),
+      sendPrepChatMessage("Generate an Executive Summary of this student's available PathwayU Career Explorer assessments, followed by Career & Major recommendations with evidence from the results. Clearly identify incomplete or unavailable assessments without inventing results.", null, { automatic: true })
+    ]);
   }
 }
 
 // One request to the Student Readiness Hub projection; no source is ever contacted directly.
 async function performStudentLookup(email) {
   const lookupVersion = ++readinessLookupVersion;
+  resetPrepChat();
+  state.assessmentData = defaultState().assessmentData;
   clearVmockReadiness();
   if (!email || !/^[^@\s]+@ensign\.edu$/i.test(email)) {
     validatePrepStep1(true);
@@ -1378,6 +1387,7 @@ async function handleDeleteRecordAfterCivitas() {
 
 function resetAppointmentLocal() {
   readinessLookupVersion++;
+  resetPrepChat();
   clearVmockReadiness();
   state = defaultState();
   localStorage.removeItem(ACTIVE_APPT_ID_KEY);
@@ -1769,6 +1779,8 @@ function bindEvents() {
   // B6: Live validation on email input
   $('#prep-student-email')?.addEventListener('input', () => {
     readinessLookupVersion++;
+    resetPrepChat();
+    state.assessmentData = defaultState().assessmentData;
     clearVmockReadiness();
     validatePrepStep1(false);
   });
@@ -2044,6 +2056,22 @@ init();
 // ==========================================================================
 
 let prepChatHistory = [];
+let prepChatVersion = 0;
+
+function resetPrepChat() {
+  // Invalidate pending feedback and remove the previous student's conversation and recommendations.
+  prepChatVersion++;
+  prepChatHistory = [];
+  state.guidance = null;
+  $('#prep-chat-messages')?.replaceChildren();
+  const engineLabel = $('#prep-chat-engine-label');
+  if (engineLabel) engineLabel.textContent = 'Ready for assessment';
+  ['guidance-traits-list', 'guidance-majors-list', 'guidance-careers-list', 'guidance-strategy-list'].forEach(id => {
+    $(`#${id}`)?.replaceChildren();
+  });
+  const code = $('#guidance-holland-code');
+  if (code) code.textContent = 'Awaiting assessment';
+}
 
 function appendPrepChatMessage(role, text) {
   const container = $('#prep-chat-messages');
@@ -2098,11 +2126,13 @@ function copyToPrepNotes(text) {
   showToast('✓ Added to Step 3 Prep Notes!');
 }
 
-async function sendPrepChatMessage(message, starterPrompt = null) {
+async function sendPrepChatMessage(message, starterPrompt = null, { automatic = false } = {}) {
   const text = starterPrompt || message;
   if (!text || !text.trim()) return;
 
-  appendPrepChatMessage('user', text);
+  const lookupVersion = readinessLookupVersion;
+  const chatVersion = prepChatVersion;
+  if (!automatic) appendPrepChatMessage('user', text);
   prepChatHistory.push({ role: 'user', content: text });
 
   // Add temporary typing bubble
@@ -2129,9 +2159,10 @@ async function sendPrepChatMessage(message, starterPrompt = null) {
       })
     });
     const data = await response.json();
+    if (lookupVersion !== readinessLookupVersion || chatVersion !== prepChatVersion) return;
     if (typingBubble) typingBubble.remove();
 
-    if (data.reply) {
+    if (response.ok && data.reply) {
       appendPrepChatMessage('assistant', data.reply);
       prepChatHistory.push({ role: 'assistant', content: data.reply });
 
@@ -2150,6 +2181,7 @@ async function sendPrepChatMessage(message, starterPrompt = null) {
       appendPrepChatMessage('assistant', data.error || 'Could not generate guidance.');
     }
   } catch (err) {
+    if (lookupVersion !== readinessLookupVersion || chatVersion !== prepChatVersion) return;
     if (typingBubble) typingBubble.remove();
     appendPrepChatMessage('assistant', 'Error communicating with Career Explorer Mentor Coach AI.');
   }

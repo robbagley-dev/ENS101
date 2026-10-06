@@ -793,7 +793,8 @@ Provide key coaching points and advice the mentor can share with the student:
     "step2": """Mode: Step 2 (Assessment Report Synthesis for Mentors).
 Goal: Provide the Career Mentor with an executive assessment synthesis of the student's Career Explorer results to prepare for their 1-on-1 coaching session.
 Base analysis ONLY on the uploaded or provided assessment data. If information is missing, say: 'That information was not visible in the uploaded report.'
-Required structure for the mentor:
+Use the headings 'Executive Summary' and 'Career & Major Recommendations'. Provide the summary first, then 3 career exploration options with aligned Ensign programs and evidence from the supplied assessment.
+Required topics for the mentor:
 1. Personality Profile (HEXACO): Summarize scores using the mandatory Emotional Sensitivity label with 2-3 coaching takeaways for the mentor.
 2. Workplace Preferences: Highlight top organizational preferences and how the mentor can help the student evaluate work environments.
 3. Core Values: Top 3 only; one sentence per value explaining what motivates the student.
@@ -1032,9 +1033,18 @@ def query_qwen(message: str, mode: str, history: list[dict[str, str]], parsed_da
     if is_ce:
         mode_context = CAREER_EXPLORER_MODE_CONTEXTS.get(mode, "")
         data_context = ""
-        if parsed_data and any(parsed_data.get(k) for k in ["holland_code", "primary_interests", "primary_values", "personality", "primary_workplace_preferences"]):
+        if parsed_data and any(parsed_data.get(k) for k in ["holland_code", "primary_interests", "primary_values", "personality", "personality_scores", "primary_workplace_preferences"]):
             data_context = assessment_prompt_context(parsed_data, PROFILE_MENTOR_ENS101)
-        system_content = f"{CAREER_EXPLORER_SYSTEM_PROMPT}\n\n{mode_context}{data_context}".strip()
+            # Hub personality scores are raw 1–5 values, not normative high/low bands.
+            source_details = {
+                "status": parsed_data.get("status"),
+                "completed_count": parsed_data.get("completed_count"),
+                "missing": parsed_data.get("missing", []),
+                "personality_scores": parsed_data.get("personality_scores"),
+            }
+            data_context += "\nImported assessment details:\n" + json.dumps(source_details)
+            data_context += "\nDo not convert raw scores to normative bands. Identify missing assessments explicitly."
+        system_content = f"{CAREER_EXPLORER_SYSTEM_PROMPT}\n\n{mode_context}".strip()
     else:
         mode_context = MODE_CONTEXTS.get(mode, "")
         system_content = f"{SYSTEM_PROMPT}\n\n{mode_context}".strip()
@@ -1046,7 +1056,9 @@ def query_qwen(message: str, mode: str, history: list[dict[str, str]], parsed_da
         if role in ("user", "assistant") and content:
             messages.append({"role": role, "content": content})
 
-    messages.append({"role": "user", "content": message})
+    # Assessment evidence belongs to this request, not to a previous conversation.
+    user_content = f"{message}\n\nUse the supplied assessment results below to generate feedback now.{data_context}" if is_ce and data_context else message
+    messages.append({"role": "user", "content": user_content})
 
     payload = {
         "model": QWEN_MODEL,
