@@ -2073,6 +2073,18 @@ function resetPrepChat() {
   if (code) code.textContent = 'Awaiting assessment';
 }
 
+function formatPrepAssistantMessage(text) {
+  // Older summaries used assessment labels as bullets. Give them real headings
+  // without changing the underlying reply or its copy-to-notes text.
+  const sections = /^(?:[-*]\s+)?\*\*(Personality Profile(?:\s*\(HEXACO\))?|Workplace Preferences|Core Values|Interests\s*&\s*Holland Code(?:\s*\([A-Z]{2,3}\))?|Aligned Occupations):?\*\*:?\s*(.*)$/i;
+  const normalized = String(text || '').split('\n').map(line => {
+    const match = line.trim().match(sections);
+    if (match) return `\n### ${match[1]}\n\n${match[2]}`;
+    return line.replace(/^#{1,4}\s+(Executive Summary|Career & Major Recommendations)\s*$/i, '## $1');
+  }).join('\n');
+  return formatAssistantMessage(normalized);
+}
+
 function appendPrepChatMessage(role, text) {
   const container = $('#prep-chat-messages');
   if (!container) return;
@@ -2084,7 +2096,7 @@ function appendPrepChatMessage(role, text) {
     msgDiv.textContent = text;
   } else {
     // Format assistant text with markdown formatting
-    const formatted = formatAssistantMessage(text);
+    const formatted = formatPrepAssistantMessage(text);
     const contentDiv = document.createElement('div');
     contentDiv.innerHTML = formatted;
     msgDiv.appendChild(contentDiv);
